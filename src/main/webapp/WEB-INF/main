@@ -1,0 +1,42 @@
+package com.atlassian;
+
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class SlidingWindowRateLimiterStrategy implements RateLimiter{
+
+    private Queue<Long> timeOfRequest;
+    private Integer timeWindowInSeconds;
+    private Integer requestsLimit;
+
+    public SlidingWindowRateLimiterStrategy(Integer timeWindowInSeconds, Integer requestsLimit) {
+        this.timeWindowInSeconds = timeWindowInSeconds;
+        this.requestsLimit = requestsLimit;
+        this.timeOfRequest= new LinkedList<>();
+    }
+
+    @Override
+    public boolean isAllowed() {
+        Long currentTime= System.currentTimeMillis();
+
+        if(!timeOfRequest.isEmpty()){
+            Long timeDifference= (currentTime-timeOfRequest.peek())/1000;
+            while(timeDifference>=timeWindowInSeconds){
+                timeOfRequest.poll();
+                if(timeOfRequest.isEmpty())
+                    break;
+                timeDifference=(currentTime-timeOfRequest.peek())/1000;
+            }
+
+        }
+        return compare(currentTime);
+    }
+
+    private synchronized boolean compare(Long currentTime) {
+        if(timeOfRequest.size()<requestsLimit){
+            timeOfRequest.offer(currentTime);
+            return true;
+        }
+        return false;
+    }
+}
